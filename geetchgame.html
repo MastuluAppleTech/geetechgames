@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>GEETECH DRIVE — Mzani Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neon-cyan: #00f3ff;
+      --neon-pink: #ff007f;
+      --neon-amber: #ffbe0b;
+      --neon-purple: #8338ec;
+    }
+
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 20%, #141229 0%, #06060d 100%);
+      font-family: 'Rajdhani', sans-serif;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+    }
+
+    .font-display {
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* Mobile-first Android Viewport Frame on Desktop, Fullscreen on Mobile */
+    #app-shell {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 100vw;
+      max-height: 100vh;
+      overflow: hidden;
+      background: #070710;
+    }
+
+    @media (min-width: 640px) {
+      #app-shell {
+        width: 430px;
+        height: 92vh;
+        max-height: 880px;
+        border-radius: 36px;
+        border: 3px solid rgba(255, 255, 255, 0.14);
+        box-shadow:
+          0 25px 70px rgba(0, 0, 0, 0.85),
+          0 0 40px rgba(0, 243, 255, 0.15),
+          inset 0 0 0 2px rgba(0, 0, 0, 0.6);
+      }
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Speed lines overlay during Nitro */
+    #speed-lines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      background: repeating-conic-gradient(
+        from 0deg at 50% 45%,
+        rgba(0, 243, 255, 0.18) 0deg 1.2deg,
+        transparent 1.2deg 9deg
+      );
+      mask-image: radial-gradient(circle at 50% 45%, transparent 38%, black 78%);
+      -webkit-mask-image: radial-gradient(circle at 50% 45%, transparent 38%, black 78%);
+    }
+
+    #speed-lines.active {
+      opacity: 1;
+      animation: pulseLines 0.18s infinite alternate;
+    }
+
+    @keyframes pulseLines {
+      from { transform: scale(1); }
+      to { transform: scale(1.04); }
+    }
+
+    /* Glassmorphism HUD panels */
+    .hud-pill {
+      background: rgba(12, 14, 28, 0.72);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .arcade-btn {
+      background: linear-gradient(135deg, #00f3ff 0%, #0077ff 100%);
+      color: #030712;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      box-shadow: 0 6px 0 #004499, 0 12px 24px rgba(0, 243, 255, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
+    }
+
+    .arcade-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #004499, 0 6px 12px rgba(0, 243, 255, 0.25);
+    }
+
+    .arcade-btn-pink {
+      background: linear-gradient(135deg, #ff2a85 0%, #ff0055 100%);
+      color: #ffffff;
+      box-shadow: 0 6px 0 #990033, 0 12px 24px rgba(255, 0, 127, 0.35);
+    }
+
+    .arcade-btn-pink:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #990033, 0 6px 12px rgba(255, 0, 127, 0.25);
+    }
+
+    /* Load Shedding Alert Pulse */
+    @keyframes blackoutPulse {
+      0%, 100% { border-color: rgba(251, 191, 36, 0.85); box-shadow: 0 0 22px rgba(245, 158, 11, 0.45); }
+      50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 32px rgba(239, 68, 68, 0.75); }
+    }
+
+    .blackout-badge {
+      animation: blackoutPulse 0.85s infinite ease-in-out;
+    }
+
+    /* Floating Popup Animation */
+    .floating-callout {
+      position: absolute;
+      left: 50%;
+      top: 34%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      text-align: center;
+      text-shadow: 0 0 14px rgba(0, 243, 255, 0.9), 0 3px 0 #000;
+      animation: floatUpFade 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      z-index: 30;
+      white-space: nowrap;
+    }
+
+    @keyframes floatUpFade {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -20%) scale(0.75);
+      }
+      20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.08);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -145%) scale(0.95);
+      }
+    }
+
+    /* Nitro Button Pulse */
+    @keyframes nitroReadyGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(0, 243, 255, 0.5), inset 0 0 10px rgba(0, 243, 255, 0.4); }
+      50% { box-shadow: 0 0 28px rgba(0, 243, 255, 0.95), inset 0 0 18px rgba(255, 255, 255, 0.7); }
+    }
+
+    .nitro-ready {
+      animation: nitroReadyGlow 1.1s infinite ease-in-out;
+    }
+
+    /* Custom subtle scrollbar for Garage */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Mobile / Android Game Viewport Container -->
+  <div id="app-shell">
+    <!-- 3D WebGL Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Speed Lines Overlay -->
+    <div id="speed-lines"></div>
+
+    <!-- Flash Overlay for Near-Miss / Impact / Biome Shift -->
+    <div id="screen-flash" class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-150 z-10"></div>
+
+    <!-- Floating Popups Container -->
+    <div id="popups-layer" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
+
+    <!-- TOP HUD (Always visible during gameplay, compact on menu) -->
+    <header id="top-hud" class="absolute top-0 left-0 right-0 p-4 pt-5 flex items-start justify-between z-30 pointer-events-none">
+      <!-- Score & Distance -->
+      <div id="gameplay-stats" class="hidden flex-col gap-1.5">
+        <div class="hud-pill rounded-2xl px-3.5 py-1.5 flex items-center gap-3">
+          <div>
+            <div class="text-[10px] uppercase tracking-widest text-cyan-300 font-bold leading-none">Score</div>
+            <div id="hud-score" class="font-display text-xl font-black text-white leading-tight">0</div>
+          </div>
+          <div class="h-6 w-[1px] bg-white/15"></div>
+          <div>
+            <div class="text-[10px] uppercase tracking-widest text-pink-400 font-bold leading-none">Combo</div>
+            <div id="hud-combo" class="font-display text-base font-bold text-pink-300 leading-tight">x1</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="hud-pill rounded-full px-3 py-0.5 text-xs font-bold text-slate-200 tracking-wider">
+            <span id="hud-distance">0</span>m
+          </div>
+          <div id="zone-badge" class="hud-pill rounded-full px-2.5 py-0.5 text-[10px] font-display font-bold uppercase tracking-wider text-cyan-300">
+            Joburg
+          </div>
+          <div id="blackout-badge" class="hidden hud-pill blackout-badge rounded-full px-2.5 py-0.5 text-[10px] font-display font-black uppercase tracking-wider text-amber-300 bg-amber-950/80">
+            ⚡ STAGE 4 Loadshedding
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu Top Left High Score Badge -->
+      <div id="menu-best-badge" class="hud-pill rounded-2xl px-3.5 py-2 flex items-center gap-2 pointer-events-auto">
+        <span class="text-amber-400 text-base">🏆</span>
+        <div>
+          <div class="text-[9px] uppercase tracking-widest text-slate-400 font-bold leading-none">Best Score</div>
+          <div id="menu-high-score" class="font-display text-sm font-bold text-white">0</div>
+        </div>
+      </div>
+
+      <!-- Right Controls: Coins, Audio, Pause -->
+      <div class="flex items-center gap-2 pointer-events-auto">
+        <!-- Coins Pill -->
+        <div class="hud-pill rounded-full px-3 py-1.5 flex items-center gap-1.5">
+          <span class="w-4 h-4 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 inline-flex items-center justify-center text-[10px] font-black text-slate-950 shadow-sm">$</span>
+          <span id="hud-coins" class="font-display text-sm font-bold text-amber-300">0</span>
+        </div>
+
+        <!-- Mute Button -->
+        <button id="btn-mute" aria-label="Toggle Sound" class="hud-pill w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-90 transition">
+          <svg id="icon-sound-on" class="w-5 h-5 text-cyan-300" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14"/>
+          </svg>
+          <svg id="icon-sound-off" class="w-5 h-5 text-rose-400 hidden" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6"/>
+          </svg>
+        </button>
+
+        <!-- Pause Button (Visible during gameplay) -->
+        <button id="btn-pause" aria-label="Pause Game" class="hidden hud-pill w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-90 transition">
+          <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="6" y="5" width="4" height="14" rx="1.5"/>
+            <rect x="14" y="5" width="4" height="14" rx="1.5"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- GAMEPLAY BOTTOM CONTROLS (Nitro Gauge + Touch Steering Hints) -->
+    <div id="gameplay-controls" class="hidden absolute bottom-0 left-0 right-0 p-5 pb-7 flex flex-col items-center gap-3 z-30 pointer-events-none">
+      <!-- Speedometer & Nitro Bar -->
+      <div class="w-full max-w-[340px] flex items-center justify-between gap-3">
+        <!-- Speed Readout -->
+        <div class="hud-pill rounded-2xl px-3 py-2 text-center min-w-[76px]">
+          <div id="hud-speed" class="font-display text-lg font-black text-white leading-none">140</div>
+          <div class="text-[9px] font-bold tracking-widest text-cyan-400 uppercase mt-0.5">KM/H</div>
+        </div>
+
+        <!-- Nitro Boost Interactive Trigger -->
+        <button id="btn-nitro" class="pointer-events-auto flex-1 hud-pill rounded-2xl p-2.5 flex flex-col gap-1.5 relative overflow-hidden active:scale-95 transition">
+          <div class="flex items-center justify-between w-full px-1">
+            <span class="font-display text-[11px] font-black tracking-wider text-cyan-300 flex items-center gap-1">
+              ⚡ NITRO BOOST
+            </span>
+            <span id="nitro-pct" class="font-display text-[11px] font-bold text-white">100%</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-900/90 rounded-full overflow-hidden p-0.5 border border-white/10">
+            <div id="nitro-bar" class="h-full w-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 transition-all duration-75"></div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Subtle Touch Zone Guide -->
+      <div class="flex items-center justify-between w-full max-w-[320px] px-2 text-[11px] font-semibold tracking-wider text-white/45 uppercase">
+        <span>◀ Tap / Drag Left</span>
+        <span>Swipe Up: Nitro</span>
+        <span>Tap / Drag Right ▶</span>
+      </div>
+    </div>
+
+    <!-- START / TITLE OVERLAY -->
+    <section id="screen-start" class="absolute inset-0 flex flex-col justify-between p-6 pt-20 pb-8 z-40 bg-gradient-to-b from-slate-950/55 via-transparent to-slate-950/90">
+      <!-- Game Title Header -->
+      <div class="text-center mt-2">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-[11px] font-display font-bold tracking-widest uppercase mb-2">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+          Geetech ZA GAMES
+        </div>
+        <h1 class="font-display text-4xl sm:text-5xl font-black tracking-tight text-white drop-shadow-[0_4px_20px_rgba(0,243,255,0.45)] leading-none">
+          GEETECH<br/>
+          <span class="bg-gradient-to-r from-cyan-300 via-sky-400 to-pink-500 bg-clip-text text-transparent">DRIVE V1.0</span>
+        </h1>
+        <p class="text-slate-300 text-sm font-medium mt-2 tracking-wide">
+          A gift from the iPhone bypass kings
+        </p>
+      </div>
+
+      <!-- Bottom Action Buttons -->
+      <div class="flex flex-col gap-3.5 w-full max-w-[340px] mx-auto">
+        <!-- Selected Car Preview Pill -->
+        <div class="hud-pill rounded-2xl p-3 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div id="selected-car-swatch" class="w-10 h-10 rounded-xl border border-white/25 shadow-inner flex items-center justify-center font-display font-black text-xs text-slate-950">
+              GT
+            </div>
+            <div>
+              <div class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Active Vehicle</div>
+              <div id="selected-car-name" class="font-display text-sm font-bold text-white">CYBER VIPER</div>
+            </div>
+          </div>
+          <button id="btn-open-garage" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 font-display text-xs font-bold tracking-wider text-cyan-300 active:scale-95 transition">
+            GARAGE 🚗
+          </button>
+        </div>
+
+        <!-- Play Button -->
+        <button id="btn-play" class="arcade-btn w-full py-4 rounded-2xl text-lg uppercase tracking-widest flex items-center justify-center gap-2.5 cursor-pointer">
+          <span>TAP TO RACE</span>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+
+        <!-- Controls Quick Legend -->
+        <div class="grid grid-cols-3 gap-2 text-center pt-1">
+          <div class="hud-pill rounded-xl py-2 px-1">
+            <div class="text-pink-400 font-display text-xs font-bold">TAXI DODGE</div>
+            <div class="text-[10px] text-slate-400">Watch Weaving Taxis</div>
+          </div>
+          <div class="hud-pill rounded-xl py-2 px-1">
+            <div class="text-amber-300 font-display text-xs font-bold">LOADSHED</div>
+            <div class="text-[10px] text-slate-400">High-Beam Survival</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GARAGE MODAL OVERLAY -->
+    <section id="screen-garage" class="hidden absolute inset-0 z-50 bg-slate-950/92 backdrop-blur-md flex flex-col p-5 pt-6 pb-7">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="font-display text-2xl font-black text-white tracking-wide">GEETECH GARAGE</h2>
+          <p class="text-xs text-slate-400">Unlock classic mzani collection cars with collected energy coins</p>
+        </div>
+        <button id="btn-close-garage" class="hud-pill w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg active:scale-90 transition">
+          ✕
+        </button>
+      </div>
+
+      <!-- Coins Balance Banner -->
+      <div class="hud-pill rounded-2xl px-4 py-2.5 mb-4 flex items-center justify-between">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Available Credits</span>
+        <div class="flex items-center gap-1.5">
+          <span class="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 inline-flex items-center justify-center text-xs font-black text-slate-950">$</span>
+          <span id="garage-coins" class="font-display text-lg font-black text-amber-300">0</span>
+        </div>
+      </div>
+
+      <!-- Car Cards Grid -->
+      <div id="garage-list" class="flex-1 overflow-y-auto no-scrollbar grid grid-cols-1 gap-3 pr-0.5">
+        <!-- Populated dynamically via JS -->
+      </div>
+
+      <button id="btn-garage-done" class="arcade-btn w-full py-3.5 rounded-2xl text-sm uppercase tracking-widest mt-4">
+        BACK TO TRACK
+      </button>
+    </section>
+
+    <!-- PAUSE OVERLAY -->
+    <section id="screen-pause" class="hidden absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6">
+      <div class="hud-pill rounded-3xl p-6 w-full max-w-[320px] text-center flex flex-col gap-4">
+        <div class="font-display text-2xl font-black text-white tracking-wider">PAUSED</div>
+        <p class="text-xs text-slate-300">Engine idling. Ready when you are.</p>
+        <button id="btn-resume" class="arcade-btn w-full py-3.5 rounded-2xl text-sm">
+          RESUME RACE
+        </button>
+        <button id="btn-quit-menu" class="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/15 font-display text-xs font-bold tracking-wider text-slate-200 active:scale-95 transition">
+          MAIN MENU
+        </button>
+      </div>
+    </section>
+
+    <!-- GAME OVER OVERLAY -->
+    <section id="screen-gameover" class="hidden absolute inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6">
+      <div class="hud-pill rounded-3xl p-6 w-full max-w-[340px] text-center flex flex-col gap-4 border border-pink-500/30 shadow-[0_0_40px_rgba(255,0,127,0.2)]">
+        <div>
+          <div id="new-record-badge" class="hidden inline-block px-3 py-0.5 rounded-full bg-amber-400/20 border border-amber-400 text-amber-300 font-display text-[10px] font-black tracking-widest uppercase mb-1">
+            ★ NEW HIGH SCORE ★
+          </div>
+          <h2 class="font-display text-3xl font-black text-white tracking-tight">WRECKED!</h2>
+          <p class="text-xs text-slate-400 mt-0.5">High-speed hull integrity compromised</p>
+        </div>
+
+        <!-- Run Summary Stats -->
+        <div class="grid grid-cols-2 gap-2.5 bg-slate-950/60 p-3.5 rounded-2xl border border-white/10">
+          <div class="text-left">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Final Score</div>
+            <div id="over-score" class="font-display text-xl font-black text-cyan-300">0</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Best Score</div>
+            <div id="over-best" class="font-display text-xl font-black text-white">0</div>
+          </div>
+          <div class="text-left pt-1 border-t border-white/10">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Distance</div>
+            <div id="over-distance" class="font-display text-sm font-bold text-slate-200">0m</div>
+          </div>
+          <div class="text-right pt-1 border-t border-white/10">
+            <div class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Near Misses</div>
+            <div id="over-nearmiss" class="font-display text-sm font-bold text-pink-400">0</div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-center gap-2 text-amber-300 font-display text-sm font-bold bg-amber-500/10 py-2 rounded-xl border border-amber-400/20">
+          <span>+$</span>
+          <span id="over-coins">0</span>
+          <span class="text-xs text-amber-200/80 font-sans font-semibold">COINS EARNED</span>
+        </div>
+
+        <div class="flex flex-col gap-2.5 mt-1">
+          <button id="btn-restart" class="arcade-btn w-full py-4 rounded-2xl text-base uppercase tracking-widest">
+            RACE AGAIN ↻
+          </button>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button id="btn-over-garage" class="py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 font-display text-xs font-bold text-cyan-300 active:scale-95 transition">
+              GARAGE
+            </button>
+            <button id="btn-over-home" class="py-3 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 font-display text-xs font-bold text-slate-300 active:scale-95 transition">
+              MENU
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast Notification Banner (Replaces alert) -->
+    <div id="toast-msg" class="hidden absolute top-20 left-1/2 -translate-x-1/2 z-50 hud-pill px-4 py-2 rounded-full text-xs font-display font-bold text-cyan-300 border border-cyan-400/40 shadow-lg whitespace-nowrap">
+      Message
+    </div>
+  </div>
+
+  <script>
+    /**
+     * GEETECH DRIVE — 3D WebGL Hyper-Casual Highway & Tunnel Racer
+     * Architecture:
+     * 1. StorageManager: Persists coins, high score, unlocked cars, selected car, and audio settings.
+     * 2. SoundEngine: Procedural Web Audio API synthesizer (dynamic engine hum, nitro roar, coin chime, near-miss whoosh, crash explosion).
+     * 3. GameWorld (Three.js): 5-lane highway with procedural neon tunnel arches, synthwave horizon grid, dynamic sector color themes, traffic AI, coins, and particle bursts.
+     * 4. InputController: Mobile-first touch drag/tap + swipe-up nitro, plus desktop keyboard (Arrow keys / A-D / Space / W).
+     */
+
+    // ==========================================
+    // 1. CAR CATALOG & STORAGE MANAGER
+    // ==========================================
+    const CAR_CATALOG = [
+      {
+        id: 'VW1',
+        name: 'KWID' ,
+        tag: 'BALANCED',
+        price: 0,
+        bodyColor: 0x00f3ff,
+        accentColor: 0xff007f,
+        hex: '#00f3ff',
+        handling: 1.0,
+        nitroEfficiency: 1.0,
+        desc: 'cheapest shit you will ever get.'
+      },
+	   {
+        id: 'VW6',
+        name: 'Polo R-Line' ,
+        tag: 'BALANCED',
+        price: 80,
+        bodyColor: 0x00f3ff,
+        accentColor: 0xff007f,
+        hex: '#00f3ff',
+        handling: 1.0,
+        nitroEfficiency: 1.0,
+        desc: 'Sporty, stylish, compact German hatchback.'
+      },
+      {
+        id: 'VW2',
+        name: 'Volkswagen Golf (Mk8)',
+        tag: 'AGILE +10%',
+        price: 300,
+        bodyColor: 0xff1e56,
+        accentColor: 0xffac41,
+        hex: '#ff1e56',
+        handling: 1.12,
+        nitroEfficiency: 1.05,
+        desc: 'Sleek, compact, reliable German hatchback.'
+      },
+      {
+        id: 'AUD',
+        name: 'AUDI RS3',
+        tag: 'NITRO +15%',
+        price: 800,
+        bodyColor: 0xffbe0b,
+        accentColor: 0xffffff,
+        hex: '#ffbe0b',
+        handling: 1.08,
+        nitroEfficiency: 1.18,
+        desc: 'Equipped with high-capacity plasma cells for longer boosts.'
+      },
+      {
+        id: 'BMW',
+        name: 'BMW 325is',
+        tag: 'PRO SPEC',
+        price: 1500,
+        bodyColor: 0x9d4edd,
+        accentColor: 0x00f5d4,
+        hex: '#9d4edd',
+        handling: 1.2,
+        nitroEfficiency: 1.25,
+        desc: 'Experimental dark-matter chassis built for 300+ KM/H runs.'
+      }
+    ];
+
+    // Sector color palettes that transition every 1,000 meters
+    const SECTOR_THEMES = [
+      { name: 'SECTOR 01 // CYBER BAY', fog: 0x090818, skyTop: '#080716', primary: 0x00f3ff, secondary: 0xff007f, road: 0x111324 },
+      { name: 'SECTOR 02 // SUNSET STRIP', fog: 0x1a091d, skyTop: '#1c081e', primary: 0xff9e00, secondary: 0xff0055, road: 0x181020 },
+      { name: 'SECTOR 03 // EMERALD GRID', fog: 0x051816, skyTop: '#041614', primary: 0x00ff9d, secondary: 0x00b8ff, road: 0x0d1b1e },
+      { name: 'SECTOR 04 // ULTRAVIOLET', fog: 0x130726, skyTop: '#120624', primary: 0xc77dff, secondary: 0xffbe0b, road: 0x160f29 }
+    ];
+
+    const StorageManager = {
+      key: 'geetech_drive_save_v1',
+      data: {
+        highScore: 0,
+        coins: 0,
+        unlockedCars: ['viper'],
+        selectedCar: 'viper',
+        muted: false
+      },
+      load() {
+        try {
+          const raw = localStorage.getItem(this.key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            this.data = { ...this.data, ...parsed };
+          }
+        } catch (e) {
+          console.warn('Storage unavailable, using session state.');
+        }
+      },
+      save() {
+        try {
+          localStorage.setItem(this.key, JSON.stringify(this.data));
+        } catch (e) {
+          // Ignore storage quota errors
+        }
+      }
+    };
+
+    StorageManager.load();
+
+    // ==========================================
+    // 2. PROCEDURAL WEB AUDIO ENGINE
+    // ==========================================
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = StorageManager.data.muted;
+        this.engineOsc = null;
+        this.engineGain = null;
+        this.nitroGain = null;
+        this.isRunning = false;
+      }
+
+      init() {
+        if (this.ctx) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        this.ctx = new AudioContext();
+
+        // Continuous engine hum oscillator
+        this.engineOsc = this.ctx.createOscillator();
+        this.engineOsc.type = 'sawtooth';
+        this.engineOsc.frequency.value = 55;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 240;
+
+        this.engineGain = this.ctx.createGain();
+        this.engineGain.gain.value = 0.0;
+
+        this.engineOsc.connect(filter);
+        filter.connect(this.engineGain);
+        this.engineGain.connect(this.ctx.destination);
+        this.engineOsc.start();
+      }
+
+      resume() {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      setMuted(mute) {
+        this.muted = mute;
+        StorageManager.data.muted = mute;
+        StorageManager.save();
+        if (this.engineGain && this.ctx) {
+          this.engineGain.gain.setTargetAtTime(mute || !this.isRunning ? 0 : 0.06, this.ctx.currentTime, 0.08);
+        }
+      }
+
+      setEngineActive(active) {
+        this.isRunning = active;
+        if (!this.ctx || !this.engineGain) return;
+        const target = (!this.muted && active) ? 0.065 : 0.0;
+        this.engineGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.1);
+      }
+
+      updateEnginePitch(speedRatio, isNitro) {
+        if (!this.ctx || !this.engineOsc || this.muted || !this.isRunning) return;
+        const baseFreq = 52 + speedRatio * 75 + (isNitro ? 42 : 0);
+        this.engineOsc.frequency.setTargetAtTime(baseFreq, this.ctx.currentTime, 0.06);
+      }
+
+      playCoin() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.setValueAtTime(1318.5, now + 0.065);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+
+      playNearMiss() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(920, now + 0.14);
+        osc.frequency.exponentialRampToValueAtTime(240, now + 0.32);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+
+      playSteer() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(190, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.07);
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+
+      playCrash() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        // White noise burst + low sub drop
+        const bufferSize = this.ctx.sampleRate * 0.55;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.35));
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(650, now);
+        filter.frequency.exponentialRampToValueAtTime(70, now + 0.5);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.32, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+
+      playTaxiHorn() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        // Classic dual-tone South African minibus taxi hooter ("peep-peep!")
+        [0, 0.14].forEach((offset) => {
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc1.type = 'sawtooth';
+          osc2.type = 'square';
+          osc1.frequency.setValueAtTime(520, now + offset);
+          osc2.frequency.setValueAtTime(655, now + offset);
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.value = 900;
+
+          gain.gain.setValueAtTime(0.09, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.1);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc1.start(now + offset);
+          osc2.start(now + offset);
+          osc1.stop(now + offset + 0.11);
+          osc2.stop(now + offset + 0.11);
+        });
+      }
+
+      playBlackoutDown() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(42, now + 0.65);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.7);
+      }
+
+      playPowerRestored() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const freqs = [330, 440, 659.25];
+        freqs.forEach((f, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(f, now + idx * 0.07);
+          gain.gain.setValueAtTime(0.11, now + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.07);
+          osc.stop(now + idx * 0.07 + 0.36);
+        });
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // ==========================================
+    // 3. THREE.JS 3D GAME ENGINE
+    // ==========================================
+    const canvas = document.getElementById('game-canvas');
+    const shell = document.getElementById('app-shell');
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(SECTOR_THEMES[0].fog, 0.0115);
+    scene.background = new THREE.Color(SECTOR_THEMES[0].fog);
+
+    const camera = new THREE.PerspectiveCamera(64, 1, 0.1, 220);
+    camera.position.set(0, 4.4, 8.8);
+    camera.lookAt(0, 1.3, -18);
+
+    // Resize handler to maintain crisp responsive aspect ratio
+    function handleResize() {
+      const width = shell.clientWidth;
+      const height = shell.clientHeight;
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      // Slightly widen FOV on narrow portrait screens so all 5 lanes stay clearly visible
+      camera.fov = camera.aspect < 0.62 ? 68 : 60;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(8, 18, 12);
+    scene.add(dirLight);
+
+    const playerUnderglow = new THREE.PointLight(0x00f3ff, 2.2, 12);
+    playerUnderglow.position.set(0, 0.6, 0);
+    scene.add(playerUnderglow);
+
+    // High-beam Headlights for Load-Shedding Blackouts
+    const headLightLeft = new THREE.SpotLight(0xfff6d6, 0, 75, Math.PI / 5.2, 0.45, 1.1);
+    const headLightRight = new THREE.SpotLight(0xfff6d6, 0, 75, Math.PI / 5.2, 0.45, 1.1);
+    const headLightTargetL = new THREE.Object3D();
+    const headLightTargetR = new THREE.Object3D();
+    scene.add(headLightLeft, headLightRight, headLightTargetL, headLightTargetR);
+    headLightLeft.target = headLightTargetL;
+    headLightRight.target = headLightTargetR;
+
+    // Volumetric Headlight Beam Cones (Visual Light Shafts on Road)
+    const beamConeGeo = new THREE.ConeGeometry(2.6, 22, 20, 1, true);
+    beamConeGeo.translate(0, -11, 0);
+    beamConeGeo.rotateX(Math.PI / 2);
+    const beamConeMat = new THREE.MeshBasicMaterial({
+      color: 0xfff3b0,
+      transparent: true,
+      opacity: 0.0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const leftBeamCone = new THREE.Mesh(beamConeGeo, beamConeMat);
+    const rightBeamCone = new THREE.Mesh(beamConeGeo, beamConeMat);
+    scene.add(leftBeamCone, rightBeamCone);
+
+    // Track Constants (5 Lanes)
+    const LANE_WIDTH = 2.4;
+    const LANES = [-2 * LANE_WIDTH, -LANE_WIDTH, 0, LANE_WIDTH, 2 * LANE_WIDTH];
+    const ROAD_WIDTH = LANE_WIDTH * 5.4;
+    const ROAD_LENGTH = 260;
+
+    // Road Mesh
+    const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, ROAD_LENGTH);
+    const roadMat = new THREE.MeshStandardMaterial({
+      color: 0x111324,
+      roughness: 0.45,
+      metalness: 0.35
+    });
+    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+    roadMesh.rotation.x = -Math.PI / 2;
+    roadMesh.position.z = -ROAD_LENGTH / 2 + 20;
+    scene.add(roadMesh);
+
+    // Neon Side Rails
+    const railGeo = new THREE.BoxGeometry(0.32, 0.55, ROAD_LENGTH);
+    const railMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+    const leftRail = new THREE.Mesh(railGeo, railMat);
+    leftRail.position.set(-ROAD_WIDTH / 2 - 0.16, 0.27, -ROAD_LENGTH / 2 + 20);
+    scene.add(leftRail);
+
+    const rightRail = new THREE.Mesh(railGeo, railMat);
+    rightRail.position.set(ROAD_WIDTH / 2 + 0.16, 0.27, -ROAD_LENGTH / 2 + 20);
+    scene.add(rightRail);
+
+    // Scrolling Dashed Lane Dividers
+    const laneLines = [];
+    const dashGeo = new THREE.PlaneGeometry(0.14, 3.4);
+    const dashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.42 });
+    const dividerX = [-1.5 * LANE_WIDTH, -0.5 * LANE_WIDTH, 0.5 * LANE_WIDTH, 1.5 * LANE_WIDTH];
+
+    for (let z = 15; z > -210; z -= 9) {
+      dividerX.forEach((xPos) => {
+        const dash = new THREE.Mesh(dashGeo, dashMat);
+        dash.rotation.x = -Math.PI / 2;
+        dash.position.set(xPos, 0.02, z);
+        scene.add(dash);
+        laneLines.push(dash);
+      });
+    }
+
+    // Tunnel Neon Arches & Synthwave Side Pillars
+    const tunnelArches = [];
+    const archMat = new THREE.MeshBasicMaterial({ color: 0xff007f });
+    const archSecondaryMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+
+    function createTunnelArch(zPos, index) {
+      const group = new THREE.Group();
+      const halfW = ROAD_WIDTH / 2 + 0.6;
+      const height = 8.4;
+
+      const pillarGeo = new THREE.BoxGeometry(0.35, height, 0.45);
+      const topGeo = new THREE.BoxGeometry(halfW * 2 + 0.35, 0.35, 0.45);
+
+      const mat = index % 2 === 0 ? archMat : archSecondaryMat;
+
+      const leftPillar = new THREE.Mesh(pillarGeo, mat);
+      leftPillar.position.set(-halfW, height / 2, 0);
+
+      const rightPillar = new THREE.Mesh(pillarGeo, mat);
+      rightPillar.position.set(halfW, height / 2, 0);
+
+      const topBeam = new THREE.Mesh(topGeo, mat);
+      topBeam.position.set(0, height, 0);
+
+      group.add(leftPillar, rightPillar, topBeam);
+      group.position.z = zPos;
+      scene.add(group);
+      return group;
+    }
+
+    for (let i = 0; i < 14; i++) {
+      tunnelArches.push(createTunnelArch(10 - i * 18, i));
+    }
+
+    // Retro Synthwave Horizon Sun & Grid
+    const sunGeo = new THREE.CircleGeometry(24, 32);
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xff007f, fog: false });
+    const horizonSun = new THREE.Mesh(sunGeo, sunMat);
+    horizonSun.position.set(0, 14, -185);
+    scene.add(horizonSun);
+
+    // ==========================================
+    // PLAYER CAR BUILDER
+    // ==========================================
+    const playerCar = new THREE.Group();
+    scene.add(playerCar);
+
+    let playerBodyMat = new THREE.MeshStandardMaterial({
+      color: 0x00f3ff,
+      roughness: 0.25,
+      metalness: 0.65
+    });
+    let playerAccentMat = new THREE.MeshBasicMaterial({ color: 0xff007f });
+    let flameLeft, flameRight;
+
+    function buildPlayerCar(carSpec) {
+      while (playerCar.children.length > 0) {
+        playerCar.remove(playerCar.children[0]);
+      }
+
+      playerBodyMat = new THREE.MeshStandardMaterial({
+        color: carSpec.bodyColor,
+        roughness: 0.22,
+        metalness: 0.7
+      });
+      playerAccentMat = new THREE.MeshBasicMaterial({ color: carSpec.accentColor });
+      playerUnderglow.color.setHex(carSpec.bodyColor);
+
+      // Lower Chassis
+      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.52, 3.5), playerBodyMat);
+      chassis.position.y = 0.48;
+      playerCar.add(chassis);
+
+      // Sleek Cabin Canopy
+      const cabinMat = new THREE.MeshStandardMaterial({
+        color: 0x0b0f19,
+        roughness: 0.1,
+        metalness: 0.9
+      });
+      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.44, 1.75), cabinMat);
+      cabin.position.set(0, 0.92, -0.15);
+      playerCar.add(cabin);
+
+      // Neon Roof & Hood Trim
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.04, 3.52), playerAccentMat);
+      stripe.position.set(0, 0.75, 0);
+      playerCar.add(stripe);
+
+      // Rear Spoiler Wing
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.08, 0.35), playerAccentMat);
+      wing.position.set(0, 1.05, 1.55);
+      playerCar.add(wing);
+
+      const strutGeo = new THREE.BoxGeometry(0.1, 0.32, 0.22);
+      const strutL = new THREE.Mesh(strutGeo, playerBodyMat);
+      strutL.position.set(-0.55, 0.88, 1.55);
+      const strutR = new THREE.Mesh(strutGeo, playerBodyMat);
+      strutR.position.set(0.55, 0.88, 1.55);
+      playerCar.add(strutL, strutR);
+
+      // Glowing Tail Lights
+      const tailMat = new THREE.MeshBasicMaterial({ color: 0xff1e56 });
+      const tailBar = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.14, 0.08), tailMat);
+      tailBar.position.set(0, 0.55, 1.76);
+      playerCar.add(tailBar);
+
+      // Front Headlight Lenses
+      const frontLensMat = new THREE.MeshBasicMaterial({ color: 0xfff8dc });
+      const lensL = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.14, 0.08), frontLensMat);
+      lensL.position.set(-0.54, 0.52, -1.76);
+      const lensR = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.14, 0.08), frontLensMat);
+      lensR.position.set(0.54, 0.52, -1.76);
+      playerCar.add(lensL, lensR);
+
+      // Nitro Exhaust Flames
+      const flameGeo = new THREE.ConeGeometry(0.18, 1.1, 8);
+      flameGeo.rotateX(Math.PI / 2);
+      const flameMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff });
+      flameLeft = new THREE.Mesh(flameGeo, flameMat);
+      flameLeft.position.set(-0.45, 0.42, 2.25);
+      flameLeft.visible = false;
+
+      flameRight = new THREE.Mesh(flameGeo, flameMat);
+      flameRight.position.set(0.45, 0.42, 2.25);
+      flameRight.visible = false;
+
+      playerCar.add(flameLeft, flameRight);
+
+      // 4 Wheels
+      const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.28, 14);
+      wheelGeo.rotateZ(Math.PI / 2);
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151821, roughness: 0.7 });
+      const wheelOffsets = [
+        [-0.85, 0.36, -1.05],
+        [0.85, 0.36, -1.05],
+        [-0.85, 0.36, 1.05],
+        [0.85, 0.36, 1.05]
+      ];
+      wheelOffsets.forEach(([wx, wy, wz]) => {
+        const w = new THREE.Mesh(wheelGeo, wheelMat);
+        w.position.set(wx, wy, wz);
+        playerCar.add(w);
+      });
+    }
+
+    // ==========================================
+    // TRAFFIC, COINS & PARTICLE POOLS
+    // ==========================================
+    const trafficCars = [];
+    const coinsList = [];
+    const particles = [];
+
+    const TRAFFIC_COLORS = [0xff2a5f, 0xff9f1c, 0x3a86ff, 0x8338ec, 0xe2e8f0];
+
+    function spawnTrafficVehicle(laneIndex, zPos, type = 'CAR') {
+      const group = new THREE.Group();
+
+      if (type === 'TAXI') {
+        // Distinctive White & Gold/Blue Quantum Minibus Taxi
+        const length = 4.2;
+        const height = 1.28;
+
+        const whiteBodyMat = new THREE.MeshStandardMaterial({
+          color: 0xf8fafc,
+          roughness: 0.3,
+          metalness: 0.25
+        });
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.66, height, length), whiteBodyMat);
+        body.position.y = height / 2 + 0.28;
+        group.add(body);
+
+        // Signature Gold & Royal Blue Racing Stripes along sides & rear
+        const goldStripeMat = new THREE.MeshBasicMaterial({ color: 0xffbe0b });
+        const blueStripeMat = new THREE.MeshBasicMaterial({ color: 0x00509d });
+        const goldBand = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.22, length + 0.04), goldStripeMat);
+        goldBand.position.y = 0.72;
+        const blueBand = new THREE.Mesh(new THREE.BoxGeometry(1.71, 0.12, length + 0.05), blueStripeMat);
+        blueBand.position.y = 0.55;
+        group.add(goldBand, blueBand);
+
+        // Tinted Rear Window & Roof Rack
+        const rearGlass = new THREE.Mesh(
+          new THREE.BoxGeometry(1.36, 0.42, 0.08),
+          new THREE.MeshBasicMaterial({ color: 0x090d16 })
+        );
+        rearGlass.position.set(0, 1.15, length / 2 + 0.02);
+        group.add(rearGlass);
+
+        const rackMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.3 });
+        const roofRack = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.1, 2.6), rackMat);
+        roofRack.position.set(0, height + 0.34, -0.1);
+        group.add(roofRack);
+
+        // Flashing Amber Hazard / Indicator Lights (Left & Right)
+        const hazardMatL = new THREE.MeshBasicMaterial({ color: 0xff9f1c });
+        const hazardMatR = new THREE.MeshBasicMaterial({ color: 0xff9f1c });
+        const hazardL = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.16, 0.1), hazardMatL);
+        hazardL.position.set(-0.62, 0.62, length / 2 + 0.03);
+        const hazardR = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.16, 0.1), hazardMatR);
+        hazardR.position.set(0.62, 0.62, length / 2 + 0.03);
+        group.add(hazardL, hazardR);
+
+        // Bright Red Taillights
+        const brakeMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+        const brakeBar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.14, 0.09), brakeMat);
+        brakeBar.position.set(0, 0.62, length / 2 + 0.025);
+        group.add(brakeBar);
+
+        group.position.set(LANES[laneIndex], 0, zPos);
+        scene.add(group);
+
+        // Pick a valid adjacent target lane to cut into unpredictably
+        const possibleTargets = [];
+        if (laneIndex > 0) possibleTargets.push(laneIndex - 1);
+        if (laneIndex < LANES.length - 1) possibleTargets.push(laneIndex + 1);
+        const targetLane = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+
+        trafficCars.push({
+          mesh: group,
+          type: 'TAXI',
+          lane: laneIndex,
+          targetLane,
+          currentX: LANES[laneIndex],
+          length,
+          speed: 18 + Math.random() * 7,
+          nearMissed: false,
+          weaveTriggered: false,
+          weaveDelay: 0.35 + Math.random() * 0.45,
+          honked: false,
+          hazardL,
+          hazardR
+        });
+        return;
+      }
+
+      const isTruck = type === 'TRUCK';
+      const color = TRAFFIC_COLORS[Math.floor(Math.random() * TRAFFIC_COLORS.length)];
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color,
+        roughness: 0.35,
+        metalness: 0.5
+      });
+
+      const length = isTruck ? 4.8 : 3.3;
+      const height = isTruck ? 1.35 : 0.62;
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.62, height, length), bodyMat);
+      body.position.y = height / 2 + 0.28;
+      group.add(body);
+
+      if (!isTruck) {
+        const cabin = new THREE.Mesh(
+          new THREE.BoxGeometry(1.26, 0.44, 1.55),
+          new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.15 })
+        );
+        cabin.position.set(0, height + 0.45, 0.1);
+        group.add(cabin);
+      }
+
+      // Bright Red Brake Lights facing player
+      const brakeMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+      const brakeL = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.08), brakeMat);
+      brakeL.position.set(-0.52, 0.56, length / 2 + 0.02);
+      const brakeR = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.08), brakeMat);
+      brakeR.position.set(0.52, 0.56, length / 2 + 0.02);
+      group.add(brakeL, brakeR);
+
+      group.position.set(LANES[laneIndex], 0, zPos);
+      scene.add(group);
+
+      trafficCars.push({
+        mesh: group,
+        type,
+        lane: laneIndex,
+        currentX: LANES[laneIndex],
+        length,
+        speed: isTruck ? 15 + Math.random() * 6 : 20 + Math.random() * 12,
+        nearMissed: false
+      });
+    }
+
+    const coinGeo = new THREE.CylinderGeometry(0.52, 0.52, 0.16, 16);
+    coinGeo.rotateX(Math.PI / 2);
+    const coinMat = new THREE.MeshStandardMaterial({
+      color: 0xffd60a,
+      emissive: 0xff9e00,
+      emissiveIntensity: 0.45,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+
+    function spawnCoinRow(laneIndex, startZ, count = 4) {
+      for (let i = 0; i < count; i++) {
+        const mesh = new THREE.Mesh(coinGeo, coinMat);
+        mesh.position.set(LANES[laneIndex], 0.85, startZ - i * 4.2);
+        scene.add(mesh);
+        coinsList.push({ mesh, collected: false });
+      }
+    }
+
+    const particleGeo = new THREE.BoxGeometry(0.22, 0.22, 0.22);
+    function spawnExplosion(x, y, z, colorHex, count = 24) {
+      for (let i = 0; i < count; i++) {
+        const mat = new THREE.MeshBasicMaterial({ color: colorHex });
+        const mesh = new THREE.Mesh(particleGeo, mat);
+        mesh.position.set(x, y, z);
+        scene.add(mesh);
+        particles.push({
+          mesh,
+          vx: (Math.random() - 0.5) * 18,
+          vy: Math.random() * 12 + 3,
+          vz: (Math.random() - 0.5) * 18,
+          life: 1.0
+        });
+      }
+    }
+
+    // ==========================================
+    // 4. GAME STATE & CORE LOOP
+    // ==========================================
+    const GameState = {
+      status: 'MENU', // MENU | PLAYING | PAUSED | GAMEOVER
+      currentLane: 2, // Center lane (0..4)
+      playerX: 0,
+      score: 0,
+      distance: 0,
+      runCoins: 0,
+      nearMissCount: 0,
+      combo: 1,
+      comboTimer: 0,
+      nitro: 100,
+      isNitroActive: false,
+      baseSpeed: 46,
+      currentSpeed: 46,
+      spawnTimer: 0,
+      coinSpawnTimer: 0,
+      shakeIntensity: 0,
+      sectorIndex: 0,
+      // Load-Shedding Blackout State
+      isBlackout: false,
+      blackoutFactor: 0, // 0 = full lights, 1 = complete blackout
+      nextBlackoutDist: 380,
+      blackoutEndDist: 0
+    };
+
+    function getSelectedCarSpec() {
+      return CAR_CATALOG.find(c => c.id === StorageManager.data.selectedCar) || CAR_CATALOG[0];
+    }
+
+    buildPlayerCar(getSelectedCarSpec());
+
+    function clearEntities() {
+      trafficCars.forEach(t => scene.remove(t.mesh));
+      trafficCars.length = 0;
+      coinsList.forEach(c => scene.remove(c.mesh));
+      coinsList.length = 0;
+      particles.forEach(p => scene.remove(p.mesh));
+      particles.length = 0;
+    }
+
+    function applySectorTheme(idx, announce = false) {
+      const theme = SECTOR_THEMES[idx % SECTOR_THEMES.length];
+      GameState.activeTheme = theme;
+      if (!GameState.isBlackout) {
+        scene.fog.color.setHex(theme.fog);
+        scene.background.setHex(theme.fog);
+        railMat.color.setHex(theme.primary);
+        archMat.color.setHex(theme.secondary);
+        archSecondaryMat.color.setHex(theme.primary);
+        roadMat.color.setHex(theme.road);
+        horizonSun.material.color.setHex(theme.secondary);
+      }
+      document.getElementById('zone-badge').textContent = `SECTOR 0${(idx % SECTOR_THEMES.length) + 1}`;
+      if (announce) {
+        triggerFlash('rgba(0, 243, 255, 0.22)');
+        spawnPopup(theme.name, '#00f3ff', '1.05rem');
+      }
+    }
+
+    function startBlackout() {
+      GameState.isBlackout = true;
+      GameState.blackoutEndDist = GameState.distance + 400;
+      document.getElementById('blackout-badge').classList.remove('hidden');
+      sound.playBlackoutDown();
+      triggerFlash('rgba(245, 158, 11, 0.32)');
+      spawnPopup('⚡ LOAD SHEDDING STAGE 4!', '#fbbf24', '1.15rem');
+    }
+
+    function endBlackout(awardBonus = true) {
+      GameState.isBlackout = false;
+      GameState.nextBlackoutDist = GameState.distance + 650 + Math.random() * 200;
+      document.getElementById('blackout-badge').classList.add('hidden');
+      if (awardBonus) {
+        GameState.score += 250;
+        GameState.nitro = Math.min(100, GameState.nitro + 30);
+        sound.playPowerRestored();
+        triggerFlash('rgba(0, 243, 255, 0.28)');
+        spawnPopup('⚡ POWER RESTORED +250!', '#00f3ff', '1.15rem');
+      }
+    }
+
+    function startNewGame() {
+      sound.init();
+      sound.resume();
+      sound.setEngineActive(true);
+
+      clearEntities();
+      const carSpec = getSelectedCarSpec();
+      buildPlayerCar(carSpec);
+
+      GameState.status = 'PLAYING';
+      GameState.currentLane = 2;
+      GameState.playerX = 0;
+      GameState.score = 0;
+      GameState.distance = 0;
+      GameState.runCoins = 0;
+      GameState.nearMissCount = 0;
+      GameState.combo = 1;
+      GameState.comboTimer = 0;
+      GameState.nitro = 100;
+      GameState.isNitroActive = false;
+      GameState.baseSpeed = 48;
+      GameState.currentSpeed = 48;
+      GameState.spawnTimer = 0.6;
+      GameState.coinSpawnTimer = 1.2;
+      GameState.shakeIntensity = 0;
+      GameState.sectorIndex = 0;
+      GameState.isBlackout = false;
+      GameState.blackoutFactor = 0;
+      GameState.nextBlackoutDist = 380;
+      GameState.blackoutEndDist = 0;
+      document.getElementById('blackout-badge').classList.add('hidden');
+
+      playerCar.visible = true;
+      playerCar.position.set(0, 0, 0);
+      playerCar.rotation.set(0, 0, 0);
+
+      applySectorTheme(0, false);
+      updateHUD();
+      showScreen('PLAYING');
+    }
+
+    function triggerCrash() {
+      GameState.status = 'GAMEOVER';
+      GameState.isNitroActive = false;
+      GameState.shakeIntensity = 0.75;
+      document.getElementById('speed-lines').classList.remove('active');
+
+      sound.setEngineActive(false);
+      sound.playCrash();
+
+      const carSpec = getSelectedCarSpec();
+      spawnExplosion(playerCar.position.x, 0.8, 0, carSpec.bodyColor, 34);
+      spawnExplosion(playerCar.position.x, 0.8, 0, 0xffbe0b, 18);
+      playerCar.visible = false;
+      triggerFlash('rgba(255, 0, 85, 0.45)');
+
+      const finalScore = Math.floor(GameState.score);
+      const isNewRecord = finalScore > StorageManager.data.highScore;
+      if (isNewRecord) {
+        StorageManager.data.highScore = finalScore;
+      }
+      StorageManager.data.coins += GameState.runCoins;
+      StorageManager.save();
+
+      // Populate Game Over modal
+      document.getElementById('over-score').textContent = finalScore.toLocaleString();
+      document.getElementById('over-best').textContent = StorageManager.data.highScore.toLocaleString();
+      document.getElementById('over-distance').textContent = `${Math.floor(GameState.distance)}m`;
+      document.getElementById('over-nearmiss').textContent = GameState.nearMissCount;
+      document.getElementById('over-coins').textContent = GameState.runCoins;
+      document.getElementById('new-record-badge').classList.toggle('hidden', !isNewRecord);
+
+      setTimeout(() => {
+        if (GameState.status === 'GAMEOVER') {
+          showScreen('GAMEOVER');
+          updateMenuStats();
+        }
+      }, 650);
+    }
+
+    // ==========================================
+    // UI POPUPS, FLASHES & HUD UPDATES
+    // ==========================================
+    function triggerFlash(rgbaColor) {
+      const flash = document.getElementById('screen-flash');
+      flash.style.background = rgbaColor;
+      flash.style.opacity = '1';
+      setTimeout(() => {
+        flash.style.opacity = '0';
+      }, 130);
+    }
+
+    function spawnPopup(text, color = '#00f3ff', fontSize = '1.15rem') {
+      const layer = document.getElementById('popups-layer');
+      const el = document.createElement('div');
+      el.className = 'floating-callout';
+      el.style.color = color;
+      el.style.fontSize = fontSize;
+      el.textContent = text;
+      layer.appendChild(el);
+      setTimeout(() => el.remove(), 950);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast-msg');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => toast.classList.add('hidden'), 2000);
+    }
+
+    function updateHUD() {
+      document.getElementById('hud-score').textContent = Math.floor(GameState.score).toLocaleString();
+      document.getElementById('hud-distance').textContent = Math.floor(GameState.distance).toLocaleString();
+      document.getElementById('hud-combo').textContent = `x${GameState.combo}`;
+      document.getElementById('hud-coins').textContent = (StorageManager.data.coins + GameState.runCoins).toLocaleString();
+
+      const displayKmh = Math.floor(GameState.currentSpeed * 3.15);
+      document.getElementById('hud-speed').textContent = displayKmh;
+
+      const nitroRounded = Math.round(GameState.nitro);
+      document.getElementById('nitro-pct').textContent = `${nitroRounded}%`;
+      document.getElementById('nitro-bar').style.width = `${GameState.nitro}%`;
+
+      const nitroBtn = document.getElementById('btn-nitro');
+      if (GameState.nitro >= 30 && !GameState.isNitroActive) {
+        nitroBtn.classList.add('nitro-ready');
+      } else {
+        nitroBtn.classList.remove('nitro-ready');
+      }
+    }
+
+    function updateMenuStats() {
+      document.getElementById('menu-high-score').textContent = StorageManager.data.highScore.toLocaleString();
+      document.getElementById('hud-coins').textContent = StorageManager.data.coins.toLocaleString();
+      document.getElementById('garage-coins').textContent = StorageManager.data.coins.toLocaleString();
+
+      const car = getSelectedCarSpec();
+      document.getElementById('selected-car-name').textContent = car.name;
+      const swatch = document.getElementById('selected-car-swatch');
+      swatch.style.background = car.hex;
+    }
+
+    function showScreen(screenName) {
+      const screens = ['screen-start', 'screen-garage', 'screen-pause', 'screen-gameover'];
+      screens.forEach(id => document.getElementById(id).classList.add('hidden'));
+
+      const isPlaying = screenName === 'PLAYING';
+      document.getElementById('gameplay-stats').classList.toggle('hidden', !isPlaying);
+      document.getElementById('gameplay-stats').classList.toggle('flex', isPlaying);
+      document.getElementById('gameplay-controls').classList.toggle('hidden', !isPlaying);
+      document.getElementById('btn-pause').classList.toggle('hidden', !isPlaying);
+      document.getElementById('menu-best-badge').classList.toggle('hidden', isPlaying);
+      if (!isPlaying) {
+        document.getElementById('blackout-badge').classList.add('hidden');
+      } else if (GameState.isBlackout) {
+        document.getElementById('blackout-badge').classList.remove('hidden');
+      }
+
+      if (screenName === 'MENU') document.getElementById('screen-start').classList.remove('hidden');
+      if (screenName === 'GARAGE') document.getElementById('screen-garage').classList.remove('hidden');
+      if (screenName === 'PAUSED') document.getElementById('screen-pause').classList.remove('hidden');
+      if (screenName === 'GAMEOVER') document.getElementById('screen-gameover').classList.remove('hidden');
+    }
+
+    // ==========================================
+    // 5. STEERING & NITRO CONTROLS
+    // ==========================================
+    function steerLeft() {
+      if (GameState.status !== 'PLAYING') return;
+      if (GameState.currentLane > 0) {
+        GameState.currentLane--;
+        sound.playSteer();
+      }
+    }
+
+    function steerRight() {
+      if (GameState.status !== 'PLAYING') return;
+      if (GameState.currentLane < LANES.length - 1) {
+        GameState.currentLane++;
+        sound.playSteer();
+      }
+    }
+
+    function setNitro(active) {
+      if (GameState.status !== 'PLAYING') {
+        GameState.isNitroActive = false;
+        document.getElementById('speed-lines').classList.remove('active');
+        return;
+      }
+      if (active && GameState.nitro > 12) {
+        GameState.isNitroActive = true;
+        document.getElementById('speed-lines').classList.add('active');
+      } else {
+        GameState.isNitroActive = false;
+        document.getElementById('speed-lines').classList.remove('active');
+      }
+    }
+
+    // Keyboard Support (Desktop)
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') steerLeft();
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') steerRight();
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') {
+        setNitro(true);
+      }
+      if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+        if (GameState.status === 'PLAYING') pauseGame();
+        else if (GameState.status === 'PAUSED') resumeGame();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') {
+        setNitro(false);
+      }
+    });
+
+    // Touch Drag / Swipe / Tap Steering on Canvas
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+    let lastStepX = 0;
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (GameState.status !== 'PLAYING') return;
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      lastStepX = t.clientX;
+      touchMoved = false;
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (GameState.status !== 'PLAYING') return;
+      const t = e.touches[0];
+      const dx = t.clientX - lastStepX;
+      const dy = t.clientY - touchStartY;
+
+      // Swipe up triggers Nitro
+      if (dy < -48 && Math.abs(dy) > Math.abs(t.clientX - touchStartX)) {
+        setNitro(true);
+        touchMoved = true;
+      }
+
+      // Smooth multi-lane drag threshold (44px per lane)
+      if (dx > 44) {
+        steerRight();
+        lastStepX = t.clientX;
+        touchMoved = true;
+      } else if (dx < -44) {
+        steerLeft();
+        lastStepX = t.clientX;
+        touchMoved = true;
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+      if (GameState.status !== 'PLAYING') return;
+      setNitro(false);
+      // If user tapped without dragging, steer based on left/right half of screen
+      if (!touchMoved) {
+        const rect = shell.getBoundingClientRect();
+        const tapX = touchStartX - rect.left;
+        if (tapX < rect.width * 0.5) steerLeft();
+        else steerRight();
+      }
+    });
+
+    // Desktop Mouse Click Left/Right on Canvas
+    canvas.addEventListener('mousedown', (e) => {
+      if (GameState.status !== 'PLAYING') return;
+      const rect = shell.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      if (clickX < rect.width * 0.5) steerLeft();
+      else steerRight();
+    });
+
+    // Dedicated Nitro Button Hold (Touch & Mouse)
+    const btnNitro = document.getElementById('btn-nitro');
+    btnNitro.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      setNitro(true);
+    }, { passive: true });
+    btnNitro.addEventListener('touchend', (e) => {
+      e.stopPropagation();
+      setNitro(false);
+    });
+    btnNitro.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      setNitro(true);
+    });
+    btnNitro.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
+      setNitro(false);
+    });
+    btnNitro.addEventListener('mouseleave', () => setNitro(false));
+
+    // ==========================================
+    // 6. GARAGE RENDERER & BUTTON BINDINGS
+    // ==========================================
+    function renderGarage() {
+      const list = document.getElementById('garage-list');
+      list.innerHTML = '';
+      document.getElementById('garage-coins').textContent = StorageManager.data.coins.toLocaleString();
+
+      CAR_CATALOG.forEach((car) => {
+        const isUnlocked = StorageManager.data.unlockedCars.includes(car.id);
+        const isSelected = StorageManager.data.selectedCar === car.id;
+
+        const card = document.createElement('div');
+        card.className = `hud-pill rounded-2xl p-3.5 flex items-center justify-between gap-3 border ${
+          isSelected ? 'border-cyan-400 bg-cyan-950/30' : 'border-white/10'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center font-display font-black text-slate-950 text-xs shadow-md shrink-0" style="background:${car.hex}">
+              GT
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-display text-sm font-bold text-white">${car.name}</span>
+                <span class="text-[9px] font-display font-bold px-2 py-0.5 rounded-full bg-white/10 text-cyan-300">${car.tag}</span>
+              </div>
+              <p class="text-[11px] text-slate-300 leading-snug mt-0.5">${car.desc}</p>
+            </div>
+          </div>
+          <div class="shrink-0">
+            ${
+              isSelected
+                ? `<span class="px-3 py-2 rounded-xl bg-cyan-400/20 border border-cyan-400 text-cyan-300 font-display text-[11px] font-bold">EQUIPPED</span>`
+                : isUnlocked
+                ? `<button data-select="${car.id}" class="px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-display text-[11px] font-bold active:scale-95 transition">SELECT</button>`
+                : `<button data-buy="${car.id}" class="px-3.5 py-2 rounded-xl bg-amber-400 text-slate-950 font-display text-[11px] font-black active:scale-95 transition">$${car.price}</button>`
+            }
+          </div>
+        `;
+
+        list.appendChild(card);
+      });
+
+      // Attach select / buy listeners
+      list.querySelectorAll('[data-select]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          StorageManager.data.selectedCar = btn.dataset.select;
+          StorageManager.save();
+          buildPlayerCar(getSelectedCarSpec());
+          renderGarage();
+          updateMenuStats();
+          sound.playCoin();
+        });
+      });
+
+      list.querySelectorAll('[data-buy]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const car = CAR_CATALOG.find(c => c.id === btn.dataset.buy);
+          if (!car) return;
+          if (StorageManager.data.coins >= car.price) {
+            StorageManager.data.coins -= car.price;
+            StorageManager.data.unlockedCars.push(car.id);
+            StorageManager.data.selectedCar = car.id;
+            StorageManager.save();
+            buildPlayerCar(car);
+            renderGarage();
+            updateMenuStats();
+            sound.playCoin();
+            showToast(`UNLOCKED ${car.name}!`);
+          } else {
+            showToast(`NEED $${car.price - StorageManager.data.coins} MORE COINS`);
+          }
+        });
+      });
+    }
+
+    function pauseGame() {
+      if (GameState.status !== 'PLAYING') return;
+      GameState.status = 'PAUSED';
+      setNitro(false);
+      sound.setEngineActive(false);
+      showScreen('PAUSED');
+    }
+
+    function resumeGame() {
+      if (GameState.status !== 'PAUSED') return;
+      GameState.status = 'PLAYING';
+      sound.setEngineActive(true);
+      showScreen('PLAYING');
+    }
+
+    // Button Event Wiring
+    document.getElementById('btn-play').addEventListener('click', startNewGame);
+    document.getElementById('btn-restart').addEventListener('click', startNewGame);
+    document.getElementById('btn-pause').addEventListener('click', pauseGame);
+    document.getElementById('btn-resume').addEventListener('click', resumeGame);
+
+    document.getElementById('btn-quit-menu').addEventListener('click', () => {
+      GameState.status = 'MENU';
+      sound.setEngineActive(false);
+      clearEntities();
+      playerCar.visible = true;
+      playerCar.position.set(0, 0, 0);
+      playerCar.rotation.set(0, 0, 0);
+      updateMenuStats();
+      showScreen('MENU');
+    });
+
+    document.getElementById('btn-over-home').addEventListener('click', () => {
+      GameState.status = 'MENU';
+      clearEntities();
+      playerCar.visible = true;
+      playerCar.position.set(0, 0, 0);
+      playerCar.rotation.set(0, 0, 0);
+      updateMenuStats();
+      showScreen('MENU');
+    });
+
+    document.getElementById('btn-open-garage').addEventListener('click', () => {
+      renderGarage();
+      showScreen('GARAGE');
+    });
+
+    document.getElementById('btn-over-garage').addEventListener('click', () => {
+      renderGarage();
+      showScreen('GARAGE');
+    });
+
+    document.getElementById('btn-close-garage').addEventListener('click', () => showScreen('MENU'));
+    document.getElementById('btn-garage-done').addEventListener('click', () => showScreen('MENU'));
+
+    // Audio Mute Toggle
+    function syncMuteIcon() {
+      document.getElementById('icon-sound-on').classList.toggle('hidden', sound.muted);
+      document.getElementById('icon-sound-off').classList.toggle('hidden', !sound.muted);
+    }
+    syncMuteIcon();
+
+    document.getElementById('btn-mute').addEventListener('click', () => {
+      sound.init();
+      sound.setMuted(!sound.muted);
+      syncMuteIcon();
+    });
+
+    // ==========================================
+    // 7. MAIN 60FPS ANIMATION & PHYSICS LOOP
+    // ==========================================
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      const carSpec = getSelectedCarSpec();
+
+      if (GameState.status === 'MENU') {
+        // Showcase idle orbit & road cruise on start screen
+        const cruiseSpeed = 24;
+        laneLines.forEach(dash => {
+          dash.position.z += cruiseSpeed * dt;
+          if (dash.position.z > 18) dash.position.z -= 225;
+        });
+        tunnelArches.forEach(arch => {
+          arch.position.z += cruiseSpeed * dt;
+          if (arch.position.z > 16) arch.position.z -= 14 * 18;
+        });
+        playerCar.position.y = Math.sin(now * 0.004) * 0.04;
+        camera.position.x = Math.sin(now * 0.0008) * 1.4;
+        camera.position.y = 4.2;
+        camera.lookAt(0, 1.1, -14);
+      }
+
+      if (GameState.status === 'PLAYING') {
+        // Progressive difficulty speed scaling
+        GameState.baseSpeed = Math.min(92, 48 + GameState.distance * 0.011);
+
+        // Nitro consumption & speed boost
+        if (GameState.isNitroActive && GameState.nitro > 0) {
+          GameState.nitro = Math.max(0, GameState.nitro - (34 / carSpec.nitroEfficiency) * dt);
+          if (GameState.nitro <= 0) setNitro(false);
+        } else {
+          GameState.nitro = Math.min(100, GameState.nitro + 5.5 * dt);
+        }
+
+        const targetSpeed = GameState.isNitroActive ? GameState.baseSpeed * 1.48 : GameState.baseSpeed;
+        GameState.currentSpeed += (targetSpeed - GameState.currentSpeed) * Math.min(1, dt * 8);
+
+        // Toggle exhaust flames
+        if (flameLeft && flameRight) {
+          flameLeft.visible = GameState.isNitroActive;
+          flameRight.visible = GameState.isNitroActive;
+          if (GameState.isNitroActive) {
+            const flicker = 0.85 + Math.random() * 0.55;
+            flameLeft.scale.set(1, flicker, 1);
+            flameRight.scale.set(1, flicker, 1);
+          }
+        }
+
+        // Update Engine Audio Pitch
+        sound.updateEnginePitch((GameState.currentSpeed - 45) / 60, GameState.isNitroActive);
+
+        // Distance & Score accumulation
+        const stepDist = GameState.currentSpeed * dt;
+        GameState.distance += stepDist * 0.45;
+        GameState.score += stepDist * 0.85 * GameState.combo * (GameState.isNitroActive ? 1.5 : 1);
+
+        // Check 1,000m Sector Color Transition
+        const newSector = Math.floor(GameState.distance / 1000);
+        if (newSector > GameState.sectorIndex) {
+          GameState.sectorIndex = newSector;
+          applySectorTheme(newSector, true);
+        }
+
+        // Load-Shedding Blackout Trigger & Recovery
+        if (!GameState.isBlackout && GameState.distance >= GameState.nextBlackoutDist) {
+          startBlackout();
+        } else if (GameState.isBlackout && GameState.distance >= GameState.blackoutEndDist) {
+          endBlackout(true);
+        }
+
+        // Smoothly interpolate lighting & headlights for Load-Shedding Blackouts
+        const targetBlackout = GameState.isBlackout ? 1.0 : 0.0;
+        GameState.blackoutFactor += (targetBlackout - GameState.blackoutFactor) * Math.min(1, dt * 3.5);
+        const bf = GameState.blackoutFactor;
+        const theme = GameState.activeTheme || SECTOR_THEMES[0];
+
+        // Dim ambient, directional, fog & neon tunnel arches during blackout
+        ambientLight.intensity = 0.65 * (1 - bf * 0.92);
+        dirLight.intensity = 0.9 * (1 - bf * 0.95);
+        scene.fog.density = 0.0115 + bf * 0.014;
+
+        const baseBg = new THREE.Color(theme.fog);
+        const darkBg = new THREE.Color(0x010104);
+        scene.background.copy(baseBg).lerp(darkBg, bf);
+        scene.fog.color.copy(scene.background);
+
+        const baseArch1 = new THREE.Color(theme.secondary);
+        const baseArch2 = new THREE.Color(theme.primary);
+        const dimArch = new THREE.Color(0x090b14);
+        archMat.color.copy(baseArch1).lerp(dimArch, bf * 0.94);
+        archSecondaryMat.color.copy(baseArch2).lerp(dimArch, bf * 0.94);
+        // Keep faint emergency amber/cyan reflective strips on road rails
+        const dimRail = new THREE.Color(0x1e293b);
+        railMat.color.copy(baseArch2).lerp(dimRail, bf * 0.85);
+        horizonSun.visible = bf < 0.85;
+
+        // High-Beam SpotLights & Volumetric Cones attached to player car
+        headLightLeft.intensity = bf * 4.5;
+        headLightRight.intensity = bf * 4.5;
+        beamConeMat.opacity = bf * 0.16;
+
+        headLightLeft.position.set(GameState.playerX - 0.55, 0.72, -1.6);
+        headLightRight.position.set(GameState.playerX + 0.55, 0.72, -1.6);
+        headLightTargetL.position.set(GameState.playerX - 1.1, 0.1, -28);
+        headLightTargetR.position.set(GameState.playerX + 1.1, 0.1, -28);
+
+        leftBeamCone.position.set(GameState.playerX - 0.55, 0.58, -1.7);
+        rightBeamCone.position.set(GameState.playerX + 0.55, 0.58, -1.7);
+        leftBeamCone.rotation.z = playerCar.rotation.z;
+        rightBeamCone.rotation.z = playerCar.rotation.z;
+
+        // Combo decay timer
+        if (GameState.combo > 1) {
+          GameState.comboTimer -= dt;
+          if (GameState.comboTimer <= 0) {
+            GameState.combo = 1;
+          }
+        }
+
+        // Smooth Lateral Lane Interpolation & Banking Tilt
+        const targetX = LANES[GameState.currentLane];
+        const diffX = targetX - GameState.playerX;
+        GameState.playerX += diffX * Math.min(1, dt * 13 * carSpec.handling);
+        playerCar.position.x = GameState.playerX;
+        playerUnderglow.position.x = GameState.playerX;
+
+        // Roll & Yaw car slightly when steering
+        playerCar.rotation.z = -diffX * 0.14;
+        playerCar.rotation.y = -diffX * 0.08;
+
+        // Dynamic Camera Follow, FOV Stretch & Screen Shake
+        const targetFov = (camera.aspect < 0.62 ? 68 : 60) + (GameState.isNitroActive ? 11 : 0);
+        camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 7);
+        camera.updateProjectionMatrix();
+
+        if (GameState.isNitroActive) {
+          GameState.shakeIntensity = Math.max(GameState.shakeIntensity, 0.07);
+        }
+        const shakeX = (Math.random() - 0.5) * GameState.shakeIntensity;
+        const shakeY = (Math.random() - 0.5) * GameState.shakeIntensity;
+        GameState.shakeIntensity = Math.max(0, GameState.shakeIntensity - dt * 2.4);
+
+        camera.position.x = GameState.playerX * 0.52 + shakeX;
+        camera.position.y = 4.35 + shakeY;
+        camera.lookAt(GameState.playerX * 0.28, 1.2, -18);
+
+        // Scroll Road Lines & Tunnel Arches
+        laneLines.forEach(dash => {
+          dash.position.z += GameState.currentSpeed * dt;
+          if (dash.position.z > 18) dash.position.z -= 225;
+        });
+
+        tunnelArches.forEach(arch => {
+          arch.position.z += GameState.currentSpeed * dt;
+          if (arch.position.z > 16) arch.position.z -= 14 * 18;
+        });
+
+        // Traffic Spawner (Always leaves at least 2 open lanes)
+        GameState.spawnTimer -= dt;
+        if (GameState.spawnTimer <= 0) {
+          const spawnInterval = Math.max(0.46, 1.25 - GameState.distance * 0.00025);
+          GameState.spawnTimer = spawnInterval;
+
+          const laneIndices = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5);
+          const carsToSpawn = GameState.distance > 350 && Math.random() < 0.45 ? 2 : 1;
+
+          for (let i = 0; i < carsToSpawn; i++) {
+            const roll = Math.random();
+            let vType = 'CAR';
+            // Spawn erratic Quantum Minibus Taxis regularly after 120m
+            if (GameState.distance > 120 && roll < 0.32) {
+              vType = 'TAXI';
+            } else if (roll < 0.52) {
+              vType = 'TRUCK';
+            }
+            spawnTrafficVehicle(laneIndices[i], -165 - i * 9, vType);
+          }
+        }
+
+        // Coin Row Spawner
+        GameState.coinSpawnTimer -= dt;
+        if (GameState.coinSpawnTimer <= 0) {
+          GameState.coinSpawnTimer = 2.6 + Math.random() * 1.4;
+          const randomLane = Math.floor(Math.random() * LANES.length);
+          spawnCoinRow(randomLane, -165, 4);
+        }
+
+        // Update Traffic & Collision / Near-Miss Detection
+        for (let i = trafficCars.length - 1; i >= 0; i--) {
+          const traffic = trafficCars[i];
+          const relSpeed = GameState.currentSpeed - traffic.speed;
+          traffic.mesh.position.z += relSpeed * dt;
+
+          // Erratic Quantum Minibus Taxi Lane-Weaving Behavior
+          if (traffic.type === 'TAXI') {
+            // Blink hazard lights rapidly
+            const blink = Math.floor(now / 110) % 2 === 0;
+            traffic.hazardL.visible = blink;
+            traffic.hazardR.visible = !blink;
+
+            // Trigger sudden lane cut when approaching player
+            if (!traffic.weaveTriggered && traffic.mesh.position.z > -62 && traffic.mesh.position.z < -26) {
+              traffic.weaveTriggered = true;
+              if (!traffic.honked) {
+                traffic.honked = true;
+                sound.playTaxiHorn();
+              }
+            }
+
+            if (traffic.weaveTriggered) {
+              const destX = LANES[traffic.targetLane];
+              const laneDiff = destX - traffic.currentX;
+              traffic.currentX += laneDiff * Math.min(1, dt * 6.5);
+              traffic.mesh.position.x = traffic.currentX;
+              traffic.mesh.rotation.z = -laneDiff * 0.11;
+              traffic.mesh.rotation.y = -laneDiff * 0.07;
+            }
+          }
+
+          const dz = Math.abs(traffic.mesh.position.z - playerCar.position.z);
+          const dx = Math.abs(traffic.mesh.position.x - playerCar.position.x);
+          const hitZ = (traffic.length * 0.5) + 1.55;
+
+          // Direct Collision Check
+          if (dz < hitZ && dx < 1.25) {
+            triggerCrash();
+            break;
+          }
+
+          // Near-Miss Check (Passing closely beside traffic without hitting)
+          if (!traffic.nearMissed && traffic.mesh.position.z > 1.2 && dx < 2.75) {
+            traffic.nearMissed = true;
+            GameState.nearMissCount++;
+            GameState.combo = Math.min(10, GameState.combo + 1);
+            GameState.comboTimer = 4.0;
+
+            if (traffic.type === 'TAXI') {
+              const bonus = 100 * GameState.combo;
+              GameState.score += bonus;
+              GameState.nitro = Math.min(100, GameState.nitro + 26);
+              sound.playTaxiHorn();
+              triggerFlash('rgba(255, 190, 11, 0.24)');
+              spawnPopup(`TAXI DODGE! +${bonus}`, '#ffbe0b', '1.2rem');
+            } else {
+              const bonus = 50 * GameState.combo;
+              GameState.score += bonus;
+              GameState.nitro = Math.min(100, GameState.nitro + 18);
+              sound.playNearMiss();
+              triggerFlash('rgba(0, 243, 255, 0.16)');
+              spawnPopup(`+${bonus} NEAR MISS!`, '#00f3ff', '1.15rem');
+            }
+          }
+
+          // Despawn passed traffic
+          if (traffic.mesh.position.z > 24) {
+            scene.remove(traffic.mesh);
+            trafficCars.splice(i, 1);
+          }
+        }
+
+        // Update Coins & Pickup Detection
+        for (let i = coinsList.length - 1; i >= 0; i--) {
+          const coin = coinsList[i];
+          coin.mesh.position.z += GameState.currentSpeed * dt;
+          coin.mesh.rotation.y += 4.2 * dt;
+
+          const dz = Math.abs(coin.mesh.position.z - playerCar.position.z);
+          const dx = Math.abs(coin.mesh.position.x - playerCar.position.x);
+
+          if (!coin.collected && dz < 2.1 && dx < 1.35) {
+            coin.collected = true;
+            GameState.runCoins += 1;
+            GameState.score += 25 * GameState.combo;
+            GameState.nitro = Math.min(100, GameState.nitro + 6);
+            sound.playCoin();
+            spawnExplosion(coin.mesh.position.x, 0.9, coin.mesh.position.z, 0xffd60a, 6);
+            scene.remove(coin.mesh);
+            coinsList.splice(i, 1);
+            continue;
+          }
+
+          if (coin.mesh.position.z > 20) {
+            scene.remove(coin.mesh);
+            coinsList.splice(i, 1);
+          }
+        }
+
+        updateHUD();
+      }
+
+      // Update Explosion / Spark Particles in all states
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt * 1.9;
+        p.vy -= 26 * dt;
+        p.mesh.position.x += p.vx * dt;
+        p.mesh.position.y += p.vy * dt;
+        p.mesh.position.z += p.vz * dt;
+        p.mesh.scale.setScalar(Math.max(0.01, p.life));
+
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Boot App on Window Load
+    window.addEventListener('load', () => {
+      updateMenuStats();
+      showScreen('MENU');
+      requestAnimationFrame(animate);
+    });
+  </script>
+</body>
+</html>
